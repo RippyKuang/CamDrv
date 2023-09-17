@@ -1,0 +1,2 @@
+#define CamDrv_VERSION_MAJOR @CamDrv_VERSION_MAJOR@
+#define CamDrv_VERSION_MINOR @CamDrv_VERSION_MINOR@
