@@ -75,9 +75,8 @@ void MVCamera::GrabImageCallback(CameraHandle hCamera, BYTE *pFrameBuffer,
 			pFrameHead);
 
 }
-void MVCamera::load_param() {
-	cv::FileStorage file("/home/kuang/project/CamDrv/config/camera.yaml",
-			cv::FileStorage::READ);
+void MVCamera::load_param(std::string path) {
+	cv::FileStorage file(path, cv::FileStorage::READ);
 	if (!file.isOpened()) {
 		abort();
 	}
@@ -98,9 +97,8 @@ void MVCamera::load_param() {
 	file["analog_gain"] >> analog_gain;
 	file.release();
 }
-void MVCamera::write_param() {
-	cv::FileStorage file("/home/kuang/project/CamDrv/config/camera.yaml",
-			cv::FileStorage::WRITE);
+void MVCamera::write_param(std::string path) {
+	cv::FileStorage file(path, cv::FileStorage::WRITE);
 	if (!file.isOpened()) {
 		abort();
 	}
@@ -237,10 +235,9 @@ void MVCamera::onceWB() {
 
 }
 int main(int argc, char **argv) {
-	cout << "Version " << CamDrv_VERSION_MAJOR << "." << CamDrv_VERSION_MINOR
-			<< endl;
 	MVCamera *c = new MVCamera();
-	c->load_param();
+	std::string path = "/home/kuang/project/CamDrv/config/camera.yaml";
+	c->load_param(path);
 	c->open();
 	c->initTrackbar();
 	cv::Mat a;
@@ -253,10 +250,9 @@ int main(int argc, char **argv) {
 		if (key == 'q')
 			break;
 		if (key == 's')
-			c->write_param();
+			c->write_param(path);
 
 	}
-
 	delete c;
 	return 0;
 }

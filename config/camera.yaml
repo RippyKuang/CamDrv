@@ -3,7 +3,7 @@
 frame_width: 640
 frame_height: 480
 blue_channel_gain: 100
-green_channel_gain: 134
+green_channel_gain: 146
 red_channel_gain: 172
 saturation: 133
 contrast: 131
