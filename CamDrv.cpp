@@ -4,7 +4,6 @@
 using namespace std;
 
 bool MVCamera::open() {
-	cout << CameraEnumerateDevice(pCameraInfo, &CamNum) << endl;
 	if (CameraEnumerateDevice(pCameraInfo, &CamNum) == CAMERA_STATUS_SUCCESS
 			&& CamNum > 0) {
 		int status = CameraInit(pCameraInfo, -1, -1, &pCameraHandle);
@@ -235,6 +234,7 @@ void MVCamera::onceWB() {
 
 }
 int main(int argc, char **argv) {
+	std::cout<<CamDrv_VERSION_MAJOR<<"."<<CamDrv_VERSION_MINOR<<std::endl;
 	MVCamera *c = new MVCamera();
 	std::string path = "/home/kuang/project/CamDrv/config/camera.yaml";
 	c->load_param(path);
@@ -251,7 +251,6 @@ int main(int argc, char **argv) {
 			break;
 		if (key == 's')
 			c->write_param(path);
-
 	}
 	delete c;
 	return 0;
