@@ -241,6 +241,7 @@ int main(int argc, char **argv) {
 	c->open();
 	c->initTrackbar();
 	cv::Mat a;
+	int cnt=0;
 	while (1) {
 		c->get_Mat(a);
 		cv::imshow("src", a);
@@ -251,6 +252,8 @@ int main(int argc, char **argv) {
 			break;
 		if (key == 's')
 			c->write_param(path);
+		if (key == 'c')
+			cv::imwrite("./"+std::to_string(cnt)+".jpg",a);
 	}
 	delete c;
 	return 0;
