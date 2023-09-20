@@ -253,7 +253,7 @@ int main(int argc, char **argv) {
 		if (key == 's')
 			c->write_param(path);
 		if (key == 'c')
-			cv::imwrite("./"+std::to_string(cnt)+".jpg",a);
+			cv::imwrite("./"+std::to_string(cnt++)+".jpg",a);
 	}
 	delete c;
 	return 0;
