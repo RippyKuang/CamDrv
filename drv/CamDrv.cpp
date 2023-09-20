@@ -36,7 +36,6 @@ bool MVCamera::open() {
 				CameraSetAeTarget(pCameraHandle, auto_exp_target_brightness);
 			} else {
 				CameraSetAeState(pCameraHandle, false);
-				double m_fExpLineTime = 0;
 				CameraGetExposureLineTime(pCameraHandle, &m_fExpLineTime);
 				CameraSetExposureTime(pCameraHandle,
 						m_fExpLineTime * exposure_time);
@@ -51,7 +50,7 @@ bool MVCamera::open() {
 			// 8位三通道
 			CameraSetIspOutFormat(pCameraHandle, CAMERA_MEDIA_TYPE_BGR8);
 			CameraSetCallbackFunction(pCameraHandle,
-					MVCamera::GrabImageCallback, m_pFrameBuffer, NULL);
+					MVCamera::GrabImageCallback, m_pFrameBuffer, nullptr);
 			CameraPlay(pCameraHandle);
 
 			std::cout << "open camera successfully" << std::endl;
@@ -74,7 +73,7 @@ void MVCamera::GrabImageCallback(CameraHandle hCamera, BYTE *pFrameBuffer,
 			pFrameHead);
 
 }
-void MVCamera::load_param(std::string path) {
+void MVCamera::load_param(const std::string& path) {
 	cv::FileStorage file(path, cv::FileStorage::READ);
 	if (!file.isOpened()) {
 		abort();
@@ -96,7 +95,7 @@ void MVCamera::load_param(std::string path) {
 	file["analog_gain"] >> analog_gain;
 	file.release();
 }
-void MVCamera::write_param(std::string path) {
+void MVCamera::write_param(const std::string& path) const {
 	cv::FileStorage file(path, cv::FileStorage::WRITE);
 	if (!file.isOpened()) {
 		abort();
@@ -121,7 +120,7 @@ void MVCamera::write_param(std::string path) {
 }
 
 void MVCamera::initTrackbar() {
-	cv::namedWindow("Trackbars", (1280, 200));
+	cv::namedWindow("Trackbars");
 
 	cv::createTrackbar("蓝增益", "Trackbars", &blue_channel_gain,
 			tCapability.sRgbGainRange.iBGainMax
@@ -148,16 +147,16 @@ void MVCamera::initTrackbar() {
 			this); //0手动 1自动
 	cv::createTrackbar("白平衡模式", "Trackbars", &wb_mode, 1, CB_WB_MODE, this); //0手动 1自动
 	cv::createTrackbar("曝光时间", "Trackbars", &exposure_time,
-			(tCapability.sExposeDesc.uiExposeTimeMax
+			int(tCapability.sExposeDesc.uiExposeTimeMax
 					- tCapability.sExposeDesc.uiExposeTimeMin), CB_SET_EXP_TIME,
 			this);
 	cv::createTrackbar("模拟增益", "Trackbars", &analog_gain,
-			tCapability.sExposeDesc.uiAnalogGainMax
-					- tCapability.sExposeDesc.uiAnalogGainMin, CB_SET_ANA_GAIN,
+                       int(tCapability.sExposeDesc.uiAnalogGainMax
+					- tCapability.sExposeDesc.uiAnalogGainMin), CB_SET_ANA_GAIN,
 			this);
 	cv::createTrackbar("自动曝光亮度目标", "Trackbars", &auto_exp_target_brightness,
-			tCapability.sExposeDesc.uiTargetMax
-					- tCapability.sExposeDesc.uiTargetMin, CB_SET_TARGET, this);
+                       int(tCapability.sExposeDesc.uiTargetMax
+					- tCapability.sExposeDesc.uiTargetMin), CB_SET_TARGET, this);
 
 }
 void MVCamera::CB_EXP_MODE(int x, void *p) {
@@ -174,7 +173,7 @@ void MVCamera::CB_WB_MODE(int x, void *p) {
 }
 void MVCamera::CB_SET_TARGET(int x, void *p) {
 	CameraSetAeTarget(((MVCamera*) p)->pCameraHandle,
-			((MVCamera*) p)->tCapability.sExposeDesc.uiTargetMin + x);
+			int(((MVCamera*) p)->tCapability.sExposeDesc.uiTargetMin + x));
 }
 void MVCamera::CB_SET_EXP_TIME(int x, void *p) {
 
@@ -185,7 +184,7 @@ void MVCamera::CB_SET_EXP_TIME(int x, void *p) {
 }
 void MVCamera::CB_SET_ANA_GAIN(int x, void *p) {
 	CameraSetAnalogGain(((MVCamera*) p)->pCameraHandle,
-			((MVCamera*) p)->tCapability.sExposeDesc.uiAnalogGainMin + x);
+			int(((MVCamera*) p)->tCapability.sExposeDesc.uiAnalogGainMin + x));
 }
 void MVCamera::CB_SET_SHARP(int x, void *p) {
 	CameraSetSharpness(((MVCamera*) p)->pCameraHandle,
@@ -233,28 +232,4 @@ void MVCamera::onceWB() {
 	cv::setTrackbarPos("蓝增益", "Trackbars", blue_channel_gain);
 
 }
-int main(int argc, char **argv) {
-	std::cout<<CamDrv_VERSION_MAJOR<<"."<<CamDrv_VERSION_MINOR<<std::endl;
-	MVCamera *c = new MVCamera();
-	std::string path = "/home/kuang/project/CamDrv/config/camera.yaml";
-	c->load_param(path);
-	c->open();
-	c->initTrackbar();
-	cv::Mat a;
-	int cnt=0;
-	while (1) {
-		c->get_Mat(a);
-		cv::imshow("src", a);
-		int key = cv::waitKey(30);
-		if (key == 'w')
-			c->onceWB();
-		if (key == 'q')
-			break;
-		if (key == 's')
-			c->write_param(path);
-		if (key == 'c')
-			cv::imwrite("./"+std::to_string(cnt++)+".jpg",a);
-	}
-	delete c;
-	return 0;
-}
+

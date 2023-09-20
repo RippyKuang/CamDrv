@@ -11,8 +11,9 @@
 #include "CameraApi.h"
 #include <opencv2/opencv.hpp>
 #include "config.h"
-#include <string.h>
+#include <cstring>
 #include <iostream>
+
 
 class MVCamera {
 private:
@@ -51,10 +52,10 @@ private:
 public:
 	CameraHandle pCameraHandle;
 	tSdkCameraDevInfo *pCameraInfo;
-	tSdkCameraCapbility tCapability;
+	tSdkCameraCapbility tCapability{};
 	MVCamera() {
 		CameraSdkInit(0);
-		m_pFrameBuffer = NULL;
+		m_pFrameBuffer = nullptr;
 		pCameraHandle = -1;
 		pCameraInfo = (tSdkCameraDevInfo*) malloc(sizeof(tSdkCameraDevInfo));
 		CamNum = 1;
@@ -82,9 +83,9 @@ public:
 	void static GrabImageCallback(CameraHandle, BYTE*, tSdkFrameHead*, PVOID);
 	bool open();
 	void get_Mat(cv::Mat&);
-	void load_param(std::string);
+	void load_param(const std::string&);
 	void initTrackbar();
-	void write_param(std::string);
+	void write_param(const std::string&) const;
 	void onceWB();
 
 };

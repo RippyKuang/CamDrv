@@ -9,14 +9,9 @@ endif()
 project (CamDrv
 	VERSION 0.1
 	DESCRIPTION "A Camera driver Project")
-find_package(OpenCV REQUIRED)
-
-
-
-add_executable(${PROJECT_NAME}  "CamDrv.cpp")
+add_executable(${PROJECT_NAME}  "main.cpp" "${CMAKE_SOURCE_DIR}/Armor/Armor.cpp")
+add_subdirectory(drv)
 configure_file(config.h.in config.h)
-target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}" 
+target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/inc"
 	)
-target_link_libraries(${PROJECT_NAME}
-					 ${OpenCV_LIBS}
-                      /lib/libMVSDK.so)
+target_link_libraries(${PROJECT_NAME} DRV)
