@@ -4,8 +4,25 @@
 
 #ifndef CAMDRV_ARMOR_HPP
 #define CAMDRV_ARMOR_HPP
-
 #include <opencv2/core/mat.hpp>
+#define RED 0
+#define BLUE 1
 
-cv::Mat findLightBar();
+class LightBar {
+
+private:
+    std::vector<cv::Point> contour;
+    cv::RotatedRect ellipse;
+public:
+    LightBar(std::vector<cv::Point>,cv::RotatedRect);
+    cv::RotatedRect& getEllipse(){
+        return ellipse;
+    };
+    std::vector<cv::Point>& getContour(){
+        return contour;
+    };
+    void static findLightBar(cv::Mat&,std::vector<LightBar*>&,unsigned char);
+};
+
+
 #endif //CAMDRV_ARMOR_HPP
