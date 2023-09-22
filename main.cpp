@@ -10,13 +10,18 @@
 
 int main() {
 	std::cout<<CamDrv_VERSION_MAJOR<<"."<<CamDrv_VERSION_MINOR<<std::endl;
-    cv::Mat src=cv::imread("/home/kuang/project/CamDrv/dengtiao/0.jpg");
-    std::vector<LightBar*> LBs;
-    LightBar:: findLightBar(src,LBs,RED);
-    Armor::drawBoundary(src,LBs[0],LBs[1]);
-    cv::imshow("qqq",src);
-    cv::waitKey(0);
+    for(int x=0;x<1000;x++) {
 
+            cv::Mat src = cv::imread("/home/kuang/project/CamDrv/dengtiao/" + std::to_string(x) + ".jpg");
+            std::vector<LightBar *> LBs;
+            LightBar::findLightBar(src, LBs, RED);
+            if(LBs.size()!=0) {
+                Armor::lightBarCluster(src,LBs);
+            }
+            cv::imshow("qqq", src);
+            cv::waitKey(0);
+
+    }
 
 
 

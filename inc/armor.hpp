@@ -14,7 +14,7 @@ private:
      cv::RotatedRect ellipse;
 public:
     LightBar(std::vector<cv::Point>,cv::RotatedRect);
-     cv::RotatedRect& getEllipse(){
+    cv::RotatedRect& getEllipse(){
         return ellipse;
     };
      std::vector<cv::Point>& getContour(){
@@ -24,8 +24,11 @@ public:
 };
 
 class Armor{
+private:
+    bool static isParallel(LightBar*,LightBar*);
 public:
-    void static drawBoundary(cv::Mat&,LightBar* lb_1,LightBar* lb_2);
+    void static drawBoundary(cv::Mat&,LightBar*,LightBar*);
+    void static lightBarCluster(cv::Mat,std::vector<LightBar*>&);
 
 };
 
