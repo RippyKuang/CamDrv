@@ -1,16 +1,16 @@
 //
 // Created by kuang on 20/09/23.
 //
-#include "Armor.hpp"
+#include "armor.hpp"
 #include "CamDrv.hpp"
 #include <vector>
 
-LightBar:: LightBar(std::vector<cv::Point> c, cv::RotatedRect rRect){
-        contour=c;
-        ellipse = std::move(rRect);
+LightBar::LightBar(std::vector<cv::Point> c, cv::RotatedRect rRect) {
+    contour = c;
+    ellipse = std::move(rRect);
 }
 
-void LightBar::findLightBar(cv::Mat& src,std::vector<LightBar*>& LBs, unsigned char targetColor) {
+void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned char targetColor) {
     if (targetColor == RED) {
 
         int threhdGray = 200, threhdRed = 245, threWrite = 240;
@@ -42,4 +42,24 @@ void LightBar::findLightBar(cv::Mat& src,std::vector<LightBar*>& LBs, unsigned c
     } else {
         //TODO: Remove this comment
     }
+};
+
+
+void Armor::drawBoundary(cv::Mat& src, LightBar *lb_1, LightBar *lb_2) {
+    std::vector<cv::Point> v;
+    std::vector<cv::Point> v1 = lb_1->getContour();
+    std::vector<cv::Point> v2 = lb_2->getContour();
+    for (int x = 0; x < v1.size(); ++x)
+        v.push_back(v1[x]);
+    for (int x = 0; x < v2.size(); ++x)
+        v.push_back(v2[x]);
+    cv::RotatedRect rect = cv::minAreaRect(v);
+    cv::Point2f pts[4];
+    rect.points(pts);
+
+    for (int i = 0; i < 4; i++) {
+        cv::line(src, pts[i % 4], pts[(i + 1) % 4], cv::Scalar(0, 0, 255), 2, 8, 0);
+    }
+    cv::Point2f cpt = rect.center;
+    cv::circle(src, cpt, 2, cv::Scalar(255, 0, 0), 2, 8, 0);
 };

@@ -9,7 +9,7 @@ endif()
 project (CamDrv
 	VERSION 1.1
 	DESCRIPTION "A Camera driver Project")
-add_executable(${PROJECT_NAME}  "main.cpp" "${CMAKE_SOURCE_DIR}/Armor/Armor.cpp")
+add_executable(${PROJECT_NAME}  "main.cpp" "${CMAKE_SOURCE_DIR}/armor/armor.cpp")
 add_subdirectory(drv)
 configure_file(config.h.in config.h)
 target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/inc"
