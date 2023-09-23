@@ -29,11 +29,11 @@ void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned
         dilate(and_img, imgDil, kernel1);
 
         cv::findContours(imgDil, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-        for (int x = 0; x < contours.size(); x++) {
-            if (cv::contourArea(contours[x]) > 30) {
-                cv::RotatedRect ellipse = cv::fitEllipse(contours[x]);
+        for (const auto &contour: contours) {
+            if (cv::contourArea(contour) > 30) {
+                cv::RotatedRect ellipse = cv::fitEllipse(contour);
                 if (ellipse.size.height / ellipse.size.width > 3 && (ellipse.angle < 30 || ellipse.angle > 150)) {
-                    auto *l = new LightBar(contours[x], ellipse);
+                    auto *l = new LightBar(contour, ellipse);
                     LBs.push_back(l);
                 }
             }
@@ -59,35 +59,59 @@ bool Armor::isParallel(LightBar *lb_1, LightBar *lb_2) {
     }
 }
 
-void Armor::drawBoundary(cv::Mat &src, LightBar *lb_1, LightBar *lb_2) {
-    std::vector<cv::Point> v;
-    std::vector<cv::Point> v1 = lb_1->getContour();
-    std::vector<cv::Point> v2 = lb_2->getContour();
-    for (int x = 0; x < v1.size(); ++x)
-        v.push_back(v1[x]);
-    for (int x = 0; x < v2.size(); ++x)
-        v.push_back(v2[x]);
-    cv::RotatedRect rect = cv::minAreaRect(v);
-    cv::Point2f pts[4];
-    rect.points(pts);
+Armor::Armor(cv::Mat& img,LightBar *lb_1, LightBar *lb_2) {
+    LB_1 = lb_1;
+    LB_2 = lb_2;
+    std::vector<cv::Point> v1 = LB_1->getContour();
+    std::vector<cv::Point> v2 = LB_2->getContour();
 
-    for (int i = 0; i < 4; i++) {
-        cv::line(src, pts[i % 4], pts[(i + 1) % 4], cv::Scalar(0, 0, 255), 2, 8, 0);
+    cv::RotatedRect rect_1 = cv::minAreaRect(v1);
+    cv::RotatedRect rect_2 = cv::minAreaRect(v2);
+    cv::Point2f vertex_1[4], vertex_2[4];
+    rect_1.points(vertex_1);
+    rect_2.points(vertex_2);
+    if ((std::pow(vertex_1[0].x - vertex_1[3].x, 2) + std::pow(vertex_1[0].y - vertex_1[3].y, 2)) >
+        (std::pow(vertex_1[0].x - vertex_1[1].x, 2) + std::pow(vertex_1[0].y - vertex_1[1].y, 2))) {
+        cv::Point2f pt1 = (vertex_1[0] + vertex_1[1]) * 0.5;
+        cv::Point2f pt2 = (vertex_1[2] + vertex_1[3]) * 0.5;
+        boundaryPoints[0] = pt1 + 0.65 * (pt1 - pt2);
+        boundaryPoints[1] = pt2 + 0.65 * (pt2 - pt1);
+    }else{
+        cv::Point2f pt1 = (vertex_1[0] + vertex_1[3]) * 0.5;
+        cv::Point2f pt2 = (vertex_1[2] + vertex_1[1]) * 0.5;
+        boundaryPoints[1] = pt1 + 0.65 * (pt1 - pt2);
+        boundaryPoints[0] = pt2 + 0.65 * (pt2 - pt1);
     }
-    cv::Point2f cpt = rect.center;
-    cv::circle(src, cpt, 2, cv::Scalar(255, 0, 0), 2, 8, 0);
-//    cv::putText(src, std::to_string(int(rect.angle)), cpt, cv::FONT_HERSHEY_DUPLEX, 2,
-//                cv::Scalar(255, 0, 255), 1);
-};
+    if ((std::pow(vertex_2[0].x - vertex_2[3].x, 2) + std::pow(vertex_2[0].y - vertex_2[3].y, 2)) >
+        (std::pow(vertex_2[0].x - vertex_2[1].x, 2) + std::pow(vertex_2[0].y - vertex_2[1].y, 2))) {
+        cv::Point2f pt1 = (vertex_2[0] + vertex_2[1]) * 0.5;
+        cv::Point2f pt2 = (vertex_2[2] + vertex_2[3]) * 0.5;
+        boundaryPoints[2] = pt1 + 0.65 * (pt1 - pt2);
+        boundaryPoints[3] = pt2 + 0.65 * (pt2 - pt1);
+    }else{
+        cv::Point2f pt1 = (vertex_2[0] + vertex_2[3]) * 0.5;
+        cv::Point2f pt2 = (vertex_2[2] + vertex_2[1]) * 0.5;
+        boundaryPoints[3] = pt1 + 0.65 * (pt1 - pt2);
+        boundaryPoints[2] = pt2 + 0.65 * (pt2 - pt1);
 
-void Armor::lightBarCluster(cv::Mat src, std::vector<LightBar *> &LBs) {
-    for (int x = 0; x < LBs.size(); x++) {
-        cv::putText(src, std::to_string(int(LBs[x]->getEllipse().angle)), LBs[x]->getEllipse().center,
-                    cv::FONT_HERSHEY_DUPLEX, 1,
-                    cv::Scalar(255, 0, 0), 1);
-        cv::ellipse(src, LBs[x]->getEllipse(), cv::Scalar(0, 255, 0), 1);
     }
-    int nofLightBar = LBs.size();
+    if(boundaryPoints[0].x>boundaryPoints[2].x){
+        cv::Point2f temp=boundaryPoints[0];
+        boundaryPoints[0]=boundaryPoints[2];
+        boundaryPoints[2]=temp;
+        temp=boundaryPoints[1];
+        boundaryPoints[1]=boundaryPoints[3];
+        boundaryPoints[3]=temp;
+    }
+    cv::Point2f src[4] = { boundaryPoints[0],boundaryPoints[1],boundaryPoints[3],boundaryPoints[2]};
+    cv::Point2f dst[4] = { {0,0},{0,350},{350,350},{350,0} };
+    cv::Mat permatrix = cv::getPerspectiveTransform(src, dst);
+    cv::warpPerspective(img, imgwarp, permatrix,cv::Size(350,350));
+
+}
+
+void Armor::lightBarCluster(cv::Mat & src,std::vector<LightBar *> &LBs, std::vector<Armor *> &ARMORs) {
+    unsigned long nofLightBar = LBs.size();
     std::vector<int> matched;
     std::vector<std::vector<int>> parallelSet;
     for (int x = 0; x < nofLightBar; x++) {
@@ -96,13 +120,13 @@ void Armor::lightBarCluster(cv::Mat src, std::vector<LightBar *> &LBs) {
         matched.push_back(x);
         for (int i = 0; i < nofLightBar; i++) {
             bool isRepeat = false;
-            for (int j = 0; j < matched.size(); j++) {
-                if (i == matched[j]) {
+            for (int j: matched) {
+                if (i == j) {
                     isRepeat = true;
                     break;
                 }
             }
-            if (Armor::isParallel(LBs[x], LBs[i]) && isRepeat == false) {
+            if (Armor::isParallel(LBs[x], LBs[i]) && !isRepeat) {
                 matched.push_back(i);
                 par.push_back(i);
             }
@@ -110,29 +134,54 @@ void Armor::lightBarCluster(cv::Mat src, std::vector<LightBar *> &LBs) {
         if (par.size() != 1)
             parallelSet.push_back(par);
     }
-    for (int x = 0; x < parallelSet.size(); x++) {
-        if (parallelSet[x].size() == 2) {
-            Armor::drawBoundary(src, LBs[parallelSet[x][0]], LBs[parallelSet[x][1]]);
+    for (auto &x: parallelSet) {
+        if (x.size() == 2) {
+            ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[1]]));
         } else {
-            float d1 = std::sqrt(std::pow(
-                    LBs[parallelSet[x][0]]->getEllipse().center.x - LBs[parallelSet[x][1]]->getEllipse().center.x, 2) +
-                                 std::pow(LBs[parallelSet[x][0]]->getEllipse().center.y -
-                                          LBs[parallelSet[x][1]]->getEllipse().center.y, 2));
-            float d2 = std::sqrt(std::pow(
-                    LBs[parallelSet[x][0]]->getEllipse().center.x - LBs[parallelSet[x][2]]->getEllipse().center.x, 2) +
-                                 std::pow(LBs[parallelSet[x][0]]->getEllipse().center.y -
-                                          LBs[parallelSet[x][2]]->getEllipse().center.y, 2));
-            float d3 = std::sqrt(std::pow(
-                    LBs[parallelSet[x][1]]->getEllipse().center.x - LBs[parallelSet[x][2]]->getEllipse().center.x, 2) +
-                                 std::pow(LBs[parallelSet[x][1]]->getEllipse().center.y -
-                                          LBs[parallelSet[x][2]]->getEllipse().center.y, 2));
-            if ((d1 > d2 && d2 > d3) || (d1 < d2 && d2 < d3))
-                Armor::drawBoundary(src, LBs[parallelSet[x][0]], LBs[parallelSet[x][2]]);
-            if ((d3 > d1 && d1 > d2) || (d2 > d1 && d1 > d3))
-                Armor::drawBoundary(src, LBs[parallelSet[x][0]], LBs[parallelSet[x][1]]);
-            if ((d1 > d3 && d3 > d2) || (d2 > d3 && d3 > d1))
-                Armor::drawBoundary(src, LBs[parallelSet[x][1]], LBs[parallelSet[x][2]]);
+            double d1 = std::sqrt(std::pow(
+                    LBs[x[0]]->getEllipse().center.x - LBs[x[1]]->getEllipse().center.x, 2) +
+                                  std::pow(LBs[x[0]]->getEllipse().center.y -
+                                           LBs[x[1]]->getEllipse().center.y, 2));
+            double d2 = std::sqrt(std::pow(
+                    LBs[x[0]]->getEllipse().center.x - LBs[x[2]]->getEllipse().center.x, 2) +
+                                  std::pow(LBs[x[0]]->getEllipse().center.y -
+                                           LBs[x[2]]->getEllipse().center.y, 2));
+            double d3 = std::sqrt(std::pow(
+                    LBs[x[1]]->getEllipse().center.x - LBs[x[2]]->getEllipse().center.x, 2) +
+                                  std::pow(LBs[x[1]]->getEllipse().center.y -
+                                           LBs[x[2]]->getEllipse().center.y, 2));
+            if ((d1 > d2 && d2 > d3) || (d1 < d2 && d2 < d3)) {
+                ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[2]]));
+                continue;
+            }
+            if ((d3 > d1 && d1 > d2) || (d2 > d1 && d1 > d3)) {
+                ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[1]]));
+                continue;
+            }
+            if ((d1 > d3 && d3 > d2) || (d2 > d3 && d3 > d1)) {
+                ARMORs.push_back(new Armor(src,LBs[x[1]], LBs[x[2]]));
+                continue;
+            }
 
         }
     }
+}
+void Armor::drawArmorBoundary(cv::Mat src) {
+    cv::line(src, boundaryPoints[0], boundaryPoints[1], cv::Scalar(0, 0, 255), 2, 8, 0);
+    cv::line(src, boundaryPoints[1], boundaryPoints[3], cv::Scalar(0, 0, 255), 2, 8, 0);
+    cv::line(src, boundaryPoints[3], boundaryPoints[2], cv::Scalar(0, 0, 255), 2, 8, 0);
+    cv::line(src, boundaryPoints[2], boundaryPoints[0], cv::Scalar(0, 0, 255), 2, 8, 0);
+    cv::putText(src, "0",  boundaryPoints[0], cv::FONT_HERSHEY_DUPLEX, 2,
+                cv::Scalar(255, 0, 0), 1);
+    cv::putText(src, "1",  boundaryPoints[1],cv::FONT_HERSHEY_DUPLEX, 2,
+                cv::Scalar(255, 0, 0), 1);
+    cv::putText(src, "2",  boundaryPoints[2], cv::FONT_HERSHEY_DUPLEX, 2,
+                cv::Scalar(255, 0, 0), 1);
+    cv::putText(src, "3",  boundaryPoints[3], cv::FONT_HERSHEY_DUPLEX, 2,
+                cv::Scalar(255, 0, 0), 1);
+}
+
+void Armor::showArmor(std::string s){
+    cv::imshow(s,imgwarp);
+    cv::waitKey(0);
 }

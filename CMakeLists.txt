@@ -7,7 +7,7 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 project (CamDrv
-	VERSION 1.1
+	VERSION 1.2
 	DESCRIPTION "A Camera driver Project")
 add_executable(${PROJECT_NAME}  "main.cpp" "${CMAKE_SOURCE_DIR}/armor/armor.cpp")
 add_subdirectory(drv)
