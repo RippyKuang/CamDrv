@@ -59,7 +59,7 @@ bool Armor::isParallel(LightBar *lb_1, LightBar *lb_2) {
     }
 }
 
-Armor::Armor(cv::Mat& img,LightBar *lb_1, LightBar *lb_2) {
+Armor::Armor(cv::Mat &img, LightBar *lb_1, LightBar *lb_2) {
     LB_1 = lb_1;
     LB_2 = lb_2;
     std::vector<cv::Point> v1 = LB_1->getContour();
@@ -76,7 +76,7 @@ Armor::Armor(cv::Mat& img,LightBar *lb_1, LightBar *lb_2) {
         cv::Point2f pt2 = (vertex_1[2] + vertex_1[3]) * 0.5;
         boundaryPoints[0] = pt1 + 0.65 * (pt1 - pt2);
         boundaryPoints[1] = pt2 + 0.65 * (pt2 - pt1);
-    }else{
+    } else {
         cv::Point2f pt1 = (vertex_1[0] + vertex_1[3]) * 0.5;
         cv::Point2f pt2 = (vertex_1[2] + vertex_1[1]) * 0.5;
         boundaryPoints[1] = pt1 + 0.65 * (pt1 - pt2);
@@ -88,29 +88,32 @@ Armor::Armor(cv::Mat& img,LightBar *lb_1, LightBar *lb_2) {
         cv::Point2f pt2 = (vertex_2[2] + vertex_2[3]) * 0.5;
         boundaryPoints[2] = pt1 + 0.65 * (pt1 - pt2);
         boundaryPoints[3] = pt2 + 0.65 * (pt2 - pt1);
-    }else{
+    } else {
         cv::Point2f pt1 = (vertex_2[0] + vertex_2[3]) * 0.5;
         cv::Point2f pt2 = (vertex_2[2] + vertex_2[1]) * 0.5;
         boundaryPoints[3] = pt1 + 0.65 * (pt1 - pt2);
         boundaryPoints[2] = pt2 + 0.65 * (pt2 - pt1);
 
     }
-    if(boundaryPoints[0].x>boundaryPoints[2].x){
-        cv::Point2f temp=boundaryPoints[0];
-        boundaryPoints[0]=boundaryPoints[2];
-        boundaryPoints[2]=temp;
-        temp=boundaryPoints[1];
-        boundaryPoints[1]=boundaryPoints[3];
-        boundaryPoints[3]=temp;
+    if (boundaryPoints[0].x > boundaryPoints[2].x) {
+        cv::Point2f temp = boundaryPoints[0];
+        boundaryPoints[0] = boundaryPoints[2];
+        boundaryPoints[2] = temp;
+        temp = boundaryPoints[1];
+        boundaryPoints[1] = boundaryPoints[3];
+        boundaryPoints[3] = temp;
     }
-    cv::Point2f src[4] = { boundaryPoints[0],boundaryPoints[1],boundaryPoints[3],boundaryPoints[2]};
-    cv::Point2f dst[4] = { {0,0},{0,350},{350,350},{350,0} };
+    cv::Point2f src[4] = {boundaryPoints[0], boundaryPoints[1], boundaryPoints[3], boundaryPoints[2]};
+    cv::Point2f dst[4] = {{0,  0},
+                          {0,  48},
+                          {36, 48},
+                          {36, 0}};
     cv::Mat permatrix = cv::getPerspectiveTransform(src, dst);
-    cv::warpPerspective(img, imgwarp, permatrix,cv::Size(350,350));
+    cv::warpPerspective(img, imgwarp, permatrix, cv::Size(36, 48));
 
 }
 
-void Armor::lightBarCluster(cv::Mat & src,std::vector<LightBar *> &LBs, std::vector<Armor *> &ARMORs) {
+void Armor::lightBarCluster(cv::Mat &src, std::vector<LightBar *> &LBs, std::vector<Armor *> &ARMORs) {
     unsigned long nofLightBar = LBs.size();
     std::vector<int> matched;
     std::vector<std::vector<int>> parallelSet;
@@ -136,7 +139,7 @@ void Armor::lightBarCluster(cv::Mat & src,std::vector<LightBar *> &LBs, std::vec
     }
     for (auto &x: parallelSet) {
         if (x.size() == 2) {
-            ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[1]]));
+            ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
         } else {
             double d1 = std::sqrt(std::pow(
                     LBs[x[0]]->getEllipse().center.x - LBs[x[1]]->getEllipse().center.x, 2) +
@@ -151,37 +154,59 @@ void Armor::lightBarCluster(cv::Mat & src,std::vector<LightBar *> &LBs, std::vec
                                   std::pow(LBs[x[1]]->getEllipse().center.y -
                                            LBs[x[2]]->getEllipse().center.y, 2));
             if ((d1 > d2 && d2 > d3) || (d1 < d2 && d2 < d3)) {
-                ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[2]]));
+                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[2]]));
                 continue;
             }
             if ((d3 > d1 && d1 > d2) || (d2 > d1 && d1 > d3)) {
-                ARMORs.push_back(new Armor(src,LBs[x[0]], LBs[x[1]]));
+                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
                 continue;
             }
             if ((d1 > d3 && d3 > d2) || (d2 > d3 && d3 > d1)) {
-                ARMORs.push_back(new Armor(src,LBs[x[1]], LBs[x[2]]));
+                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
                 continue;
             }
 
         }
     }
 }
+
 void Armor::drawArmorBoundary(cv::Mat src) {
     cv::line(src, boundaryPoints[0], boundaryPoints[1], cv::Scalar(0, 0, 255), 2, 8, 0);
     cv::line(src, boundaryPoints[1], boundaryPoints[3], cv::Scalar(0, 0, 255), 2, 8, 0);
     cv::line(src, boundaryPoints[3], boundaryPoints[2], cv::Scalar(0, 0, 255), 2, 8, 0);
     cv::line(src, boundaryPoints[2], boundaryPoints[0], cv::Scalar(0, 0, 255), 2, 8, 0);
-    cv::putText(src, "0",  boundaryPoints[0], cv::FONT_HERSHEY_DUPLEX, 2,
+    cv::putText(src, "0", boundaryPoints[0], cv::FONT_HERSHEY_DUPLEX, 2,
                 cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "1",  boundaryPoints[1],cv::FONT_HERSHEY_DUPLEX, 2,
+    cv::putText(src, "1", boundaryPoints[1], cv::FONT_HERSHEY_DUPLEX, 2,
                 cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "2",  boundaryPoints[2], cv::FONT_HERSHEY_DUPLEX, 2,
+    cv::putText(src, "2", boundaryPoints[2], cv::FONT_HERSHEY_DUPLEX, 2,
                 cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "3",  boundaryPoints[3], cv::FONT_HERSHEY_DUPLEX, 2,
+    cv::putText(src, "3", boundaryPoints[3], cv::FONT_HERSHEY_DUPLEX, 2,
                 cv::Scalar(255, 0, 0), 1);
 }
 
-void Armor::showArmor(std::string s){
-    cv::imshow(s,imgwarp);
+void Armor::showArmor(std::string s) {
+    cv::imshow(s, imgwarp);
     cv::waitKey(0);
+}
+
+std::vector<float> Armor::forward() {
+    std::vector<float> res;
+    cv::dnn::Net net = cv::dnn::readNetFromONNX("/home/kuang/project/CamDrv/model.onnx");
+    cv::Scalar mean;
+    cv::Mat stddevMat, blob, grayimg;
+    cv::cvtColor(imgwarp, grayimg, cv::COLOR_BGR2GRAY);
+    cv::meanStdDev(grayimg, mean, stddevMat);
+    cv::dnn::blobFromImage(grayimg, blob, 1, cv::Size(48, 36), mean, true, false);
+    net.setInput(blob);  // 设置模型输入
+    cv::Mat predict = net.forward(); // 推理出结果
+    double total = 0;
+    double MAX = predict.at<float>(0);
+    for (int x = 0; x < predict.cols; x++)
+        MAX = std::fmax(predict.at<float>(x), MAX);
+    for (int x = 0; x < predict.cols; x++)
+        total += std::exp(predict.at<float>(x) - MAX);
+    for (int x = 0; x < predict.cols; x++)
+        res.push_back(std::exp((predict.at<float>(x) - MAX) / total));
+    return res;
 }
