@@ -189,6 +189,13 @@ void Armor::showArmor(std::string s) {
     cv::imshow(s, imgwarp);
     cv::waitKey(0);
 }
+cv::Mat  Armor::getScore(){
+    cv::Mat grayimg,stddevMat;
+    cv::Scalar mean;
+    cv::cvtColor(imgwarp, grayimg, cv::COLOR_BGR2GRAY);
+    cv::meanStdDev(grayimg, mean, stddevMat);
+    return stddevMat;
+}
 
 std::vector<float> Armor::forward() {
     std::vector<float> res;
@@ -198,6 +205,7 @@ std::vector<float> Armor::forward() {
     cv::cvtColor(imgwarp, grayimg, cv::COLOR_BGR2GRAY);
     cv::meanStdDev(grayimg, mean, stddevMat);
     cv::dnn::blobFromImage(grayimg, blob, 1, cv::Size(48, 36), mean, true, false);
+
     net.setInput(blob);  // 设置模型输入
     cv::Mat predict = net.forward(); // 推理出结果
     double total = 0;

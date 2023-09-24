@@ -41,6 +41,7 @@ private:
 public:
     Armor(cv::Mat& img,LightBar *, LightBar *);
     std::vector<float> forward();
+    cv::Mat getScore();
     void drawArmorBoundary(cv::Mat);
     void showArmor(std::string);
     void static lightBarCluster(cv::Mat &,std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);

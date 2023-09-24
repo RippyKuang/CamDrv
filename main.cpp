@@ -18,14 +18,13 @@ for(int x=0;x<100000;x++) {
     if (!LBs.empty()) {
         Armor::lightBarCluster(src, LBs, AMs);
         if (!AMs.empty()) {
-          //  AMs[0]->showArmor("arm");
             std::vector<float> res = AMs[0]->forward();
             int index = 0;
             for (int x = 0; x < res.size(); x++) {
                 if (res[x] > res[index])
                     index = x;
             }
-            std::cout << index << std::endl;
+            std::cout << index << "    "<< AMs[0]->getScore()<<std::endl;
         }
     }
 }
