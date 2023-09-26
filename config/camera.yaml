@@ -1,16 +1,16 @@
 %YAML:1.0
 ---
-frame_width: 1280
-frame_height: 960
+frame_width: 640
+frame_height: 480
 blue_channel_gain: 100
-green_channel_gain: 119
-red_channel_gain: 142
-saturation: 95
-contrast: 109
-gamma: 72
+green_channel_gain: 132
+red_channel_gain: 168
+saturation: 86
+contrast: 112
+gamma: 81
 sharpness: 0
 auto_exp_target_brightness: 120
-exposure_time: 8190
+exposure_time: 2108
 analog_gain: 1
 exposure_mode: 0
 wb_mode: 0

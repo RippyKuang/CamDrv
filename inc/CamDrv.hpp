@@ -20,8 +20,7 @@ private:
 
 	unsigned char *m_pFrameBuffer;
 	int CamNum;
-	int frame_width;
-	int frame_height;
+
 
 	int blue_channel_gain;
 	int green_channel_gain;
@@ -53,6 +52,8 @@ public:
 	CameraHandle pCameraHandle;
 	tSdkCameraDevInfo *pCameraInfo;
 	tSdkCameraCapbility tCapability{};
+    int frame_width;
+    int frame_height;
 	MVCamera() {
 		CameraSdkInit(0);
 		m_pFrameBuffer = nullptr;

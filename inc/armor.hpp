@@ -14,6 +14,7 @@ class LightBar {
 private:
     std::vector<cv::Point> contour;
     cv::RotatedRect ellipse;
+    double length;
 public:
     LightBar(std::vector<cv::Point>, cv::RotatedRect);
 
@@ -24,6 +25,7 @@ public:
     std::vector<cv::Point> &getContour() {
         return contour;
     };
+    double getLength();
 
     void static findLightBar(cv::Mat &, std::vector<LightBar *> &, unsigned char);
 };
@@ -45,8 +47,6 @@ public:
     void drawArmorBoundary(cv::Mat);
     void showArmor(std::string);
     void static lightBarCluster(cv::Mat &,std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);
-
-
 };
 
 #endif //CAMDRV_ARMOR_HPP

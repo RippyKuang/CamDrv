@@ -8,13 +8,22 @@
 LightBar::LightBar(std::vector<cv::Point> c, cv::RotatedRect rRect) {
     contour = c;
     ellipse = std::move(rRect);
+    cv::RotatedRect rect_1 = cv::minAreaRect(contour);
+    cv::Point2f vertex_1[4];
+    rect_1.points(vertex_1);
+    double d01 = std::sqrt(std::pow(vertex_1[0].x - vertex_1[1].x, 2) + std::pow(vertex_1[0].y - vertex_1[1].y, 2));
+    double d03 = std::sqrt(std::pow(vertex_1[0].x - vertex_1[3].x, 2) + std::pow(vertex_1[0].y - vertex_1[3].y, 2));
+    if (d03 > d01)
+        length = d03;
+    else
+        length = d01;
 }
 
 void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned char targetColor) {
     if (targetColor == RED) {
 
-        int threhdGray = 200, threhdRed = 245, threWrite = 240;
-        cv::Mat kernel1 = getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+        int threhdGray = 170, threhdRed = 235, threWrite = 250;
+        cv::Mat kernel1 = getStructuringElement(cv::MORPH_RECT, cv::Size(7, 7));
         cv::Mat grayimg, aftr_Graythd, aftr_Redthd, and_img, white_mask, imgDil;
         std::vector<std::vector<cv::Point>> contours;
         std::vector<cv::Vec4i> hierarchy;
@@ -28,12 +37,16 @@ void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned
         cv::bitwise_and(aftr_Redthd, aftr_Graythd & white_mask, and_img);
         dilate(and_img, imgDil, kernel1);
 
+        int cnt=0;
         cv::findContours(imgDil, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
         for (const auto &contour: contours) {
             if (cv::contourArea(contour) > 30) {
                 cv::RotatedRect ellipse = cv::fitEllipse(contour);
-                if (ellipse.size.height / ellipse.size.width > 3 && (ellipse.angle < 30 || ellipse.angle > 150)) {
+                if (ellipse.size.height / ellipse.size.width > 2 && (ellipse.angle < 30 || ellipse.angle > 150)) {
                     auto *l = new LightBar(contour, ellipse);
+//                    cv::putText(src, std::to_string(int(l->getEllipse().angle)), l->getEllipse().center,
+//                                cv::FONT_HERSHEY_DUPLEX, 2,
+//                                cv::Scalar(0, 255, 0), 1);
                     LBs.push_back(l);
                 }
             }
@@ -42,6 +55,10 @@ void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned
     } else {
         //TODO: Remove this comment
     }
+}
+
+double LightBar::getLength() {
+    return length;
 }
 
 bool Armor::isParallel(LightBar *lb_1, LightBar *lb_2) {
@@ -114,56 +131,248 @@ Armor::Armor(cv::Mat &img, LightBar *lb_1, LightBar *lb_2) {
 }
 
 void Armor::lightBarCluster(cv::Mat &src, std::vector<LightBar *> &LBs, std::vector<Armor *> &ARMORs) {
-    unsigned long nofLightBar = LBs.size();
-    std::vector<int> matched;
-    std::vector<std::vector<int>> parallelSet;
-    for (int x = 0; x < nofLightBar; x++) {
-        std::vector<int> par;
-        par.push_back(x);
-        matched.push_back(x);
-        for (int i = 0; i < nofLightBar; i++) {
-            bool isRepeat = false;
-            for (int j: matched) {
-                if (i == j) {
-                    isRepeat = true;
-                    break;
-                }
-            }
-            if (Armor::isParallel(LBs[x], LBs[i]) && !isRepeat) {
-                matched.push_back(i);
-                par.push_back(i);
+    auto *isReflect = (unsigned char *) malloc(sizeof(unsigned char) * LBs.size());
+    auto *isMatched = (unsigned char *) malloc(sizeof(unsigned char) * LBs.size());
+    memset(isReflect, 0, sizeof(unsigned char) * LBs.size()+1);
+    memset(isMatched, 0, sizeof(unsigned char) * LBs.size()+1);
+    for (int x = 0; x < LBs.size(); x++) {
+        for (int i = 0; i < LBs.size(); i++) {
+            if (x == i)continue;
+            if (std::abs(LBs[x]->getEllipse().center.x - LBs[i]->getEllipse().center.x) < 25 &&
+                (LBs[x]->getEllipse().center.y - LBs[i]->getEllipse().center.y) > 40) {
+                isReflect[x] = 1;
+                isMatched[x] = 1;
             }
         }
-        if (par.size() != 1)
-            parallelSet.push_back(par);
     }
+
+    std::vector<std::vector<int>> parallelSet={};
+    for (int x = 0; x < LBs.size(); x++) {
+        if (isReflect[x] == 0) {
+            std::vector<int> par={};
+            par.push_back(x);
+            if(isMatched[x]==0) {
+                for (int i = 0; i < LBs.size(); i++) {
+                    if (isReflect[i] == 0 && isMatched[i] == 0 && i!=x) {
+
+                        if (Armor::isParallel(LBs[x], LBs[i])) {
+                            isMatched[i] = 1;
+                            isMatched[x] = 1;
+                            par.push_back(i);
+                        }
+                    }
+                }
+                if (par.size() != 1) {
+                    parallelSet.push_back(par);
+                }
+            }
+
+        }
+    }
+
+
+    for (int x=0;x<LBs.size();x++) {
+        if(isMatched[x]==0){
+            bool f = false;
+
+            for (auto &w: parallelSet) {
+                if (f)break;
+                for (int p = 0; p < w.size(); p++) {
+                    if (isParallel(LBs[x],LBs[w[p]])) {
+                        w.push_back(x);
+                        f = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+
     for (auto &x: parallelSet) {
+
         if (x.size() == 2) {
-            ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
-        } else {
-            double d1 = std::sqrt(std::pow(
-                    LBs[x[0]]->getEllipse().center.x - LBs[x[1]]->getEllipse().center.x, 2) +
-                                  std::pow(LBs[x[0]]->getEllipse().center.y -
-                                           LBs[x[1]]->getEllipse().center.y, 2));
-            double d2 = std::sqrt(std::pow(
-                    LBs[x[0]]->getEllipse().center.x - LBs[x[2]]->getEllipse().center.x, 2) +
-                                  std::pow(LBs[x[0]]->getEllipse().center.y -
-                                           LBs[x[2]]->getEllipse().center.y, 2));
-            double d3 = std::sqrt(std::pow(
-                    LBs[x[1]]->getEllipse().center.x - LBs[x[2]]->getEllipse().center.x, 2) +
-                                  std::pow(LBs[x[1]]->getEllipse().center.y -
-                                           LBs[x[2]]->getEllipse().center.y, 2));
-            if ((d1 > d2 && d2 > d3) || (d1 < d2 && d2 < d3)) {
-                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[2]]));
-                continue;
+
+            float a = std::abs(LBs[x[0]]->getEllipse().center.y - LBs[x[1]]->getEllipse().center.y);
+            float b = std::abs(LBs[x[0]]->getEllipse().center.x - LBs[x[1]]->getEllipse().center.x);
+            double l1 = LBs[x[0]]->getLength();
+            double l2 = LBs[x[1]]->getLength();
+            if (l1 < l2) {
+                double t = l1;
+                l1 = l2;
+                l2 = t;
             }
-            if ((d3 > d1 && d1 > d2) || (d2 > d1 && d1 > d3)) {
+            if (a < 10 && b < (l1 + l2) * 1.3 && l1 / l2 < 1.3)
                 ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
-                continue;
-            }
-            if ((d1 > d3 && d3 > d2) || (d2 > d3 && d3 > d1)) {
-                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
-                continue;
+        } else {
+            float a, b, c;
+//            cv::putText(src, "0", LBs[x[0]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
+//                        cv::Scalar(255, 0, 0), 2);
+//            cv::putText(src, "1", LBs[x[1]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
+//                        cv::Scalar(255, 0, 0), 2);
+//            cv::putText(src, "2", LBs[x[2]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
+//                        cv::Scalar(255, 0, 0), 2);
+            a = std::abs(LBs[x[1]]->getEllipse().center.y - LBs[x[0]]->getEllipse().center.y);
+            b = std::abs(LBs[x[1]]->getEllipse().center.y - LBs[x[2]]->getEllipse().center.y);
+            c = std::abs(LBs[x[0]]->getEllipse().center.y - LBs[x[2]]->getEllipse().center.y);
+            float x02 = std::sqrt(std::pow(LBs[x[2]]->getEllipse().center.x - LBs[x[0]]->getEllipse().center.x, 2) +
+                        std::pow(LBs[x[2]]->getEllipse().center.y - LBs[x[0]]->getEllipse().center.y, 2));
+            float x21 = std::sqrt(std::pow(LBs[x[2]]->getEllipse().center.x - LBs[x[1]]->getEllipse().center.x, 2) +
+                        std::pow(LBs[x[2]]->getEllipse().center.y - LBs[x[1]]->getEllipse().center.y, 2));
+            float x01 = std::sqrt(std::pow(LBs[x[1]]->getEllipse().center.x - LBs[x[0]]->getEllipse().center.x, 2) +
+                        std::pow(LBs[x[1]]->getEllipse().center.y - LBs[x[0]]->getEllipse().center.y, 2));
+            double l0 = LBs[x[0]]->getLength();
+            double l1 = LBs[x[1]]->getLength();
+            double l2 = LBs[x[0]]->getLength();
+
+
+            if (std::abs(a - b) > 8 || std::abs(c - b) > 8 || std::abs(a - c) > 8) {
+                if (a < b && a < c) {
+                    if (x01 < x02 || x01 < x21) {
+                        ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
+                    }
+                    continue;
+                } else {
+                    if (b < c) {
+                        if (x21 < x02 || x21 < x01) {
+                            ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[1]]));
+                        }
+                        continue;
+                    } else {
+                        if (x02 < x01 || x02 < x21) {
+                            ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[2]]));
+                        }
+                        continue;
+                    }
+                }
+
+
+            } else {
+                float angle_1 = std::abs(LBs[x[0]]->getEllipse().angle);
+                float angle_2 = std::abs(LBs[x[1]]->getEllipse().angle);
+                float angle_3 = std::abs(LBs[x[2]]->getEllipse().angle);
+                if (angle_1 < 90)angle_1 += 180;
+                if (angle_2 < 90)angle_2 += 180;
+                if (angle_3 < 90)angle_3 += 180;
+                float d12 = std::abs(angle_1 - angle_2);
+                float d23 = std::abs(angle_3 - angle_2);
+                float d31 = std::abs(angle_3 - angle_1);
+                int a,b;
+                if(d12<d23){
+                    if(d12<d31)
+                        a=0,b=1;
+                    else
+                        a=0,b=2;
+                }else{//d23<d12
+                    if(d23<d31)
+                        a=1,b=2;
+                    else
+                        a=2,b=0;
+                }
+                int c,d;
+
+                if(x02>x21){
+                    if(x02>x01){
+                      if(x01>x21)
+                          c=1,d=0;
+                      else
+                          c=2,d=1;
+
+                    }else
+                       c=2,d=0;
+
+                }else{
+                    if(x01>x21){
+                        c=1,d=2;
+                    }else{
+                        if(x01>x02)
+                       c=0,d=1;
+                        else
+                        c=2,d=0;
+                    }
+                };
+
+                bool depend_on_angle =false;
+                if(x01>x02){
+                    if(x01>x21){
+                        if(std::abs(x02-x21)<5){
+                            depend_on_angle= true;
+                        }
+                    }else{
+                            if(std::abs(x01-x02)<5){
+                                depend_on_angle= true;
+                            }
+                    }
+                }else{ //x02<x01
+                    if(x01>x21){
+                        if(std::abs(x21-x02)<5){
+                            depend_on_angle= true;
+                        }
+                    }else{
+                        if(std::abs(x01-x02)<5){
+                            depend_on_angle= true;
+                        }
+                    }
+
+                }
+                std::cout<<depend_on_angle<<std::endl;
+                if(depend_on_angle)
+                    ARMORs.push_back(new Armor(src, LBs[x[a]], LBs[x[b]]));
+                else
+                    ARMORs.push_back(new Armor(src, LBs[x[c]], LBs[x[d]]));
+//                if (d12 < d23) {
+//                    if (d31 < d12) {
+//                        if (x02 < x21 || x02 < x01) {
+//                            ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
+//                        } else {
+//                            if (d12 < d23) {
+//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
+//                            } else {
+//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
+//                            }
+//                        }
+//                        continue;
+//                    } else {
+//                        if (x01 < x21 || x01 < x02) {
+//                            ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[0]]));
+//
+//                        } else {
+//                            if (d23 < d31) {
+//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[2]]));
+//                            } else {
+//                                ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[1]]));
+//                            }
+//                        }
+//                        continue;
+//                    }
+//                } else {
+//                    if (d31 < d23) {
+//                        if (d23 < d12) {
+//                            ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
+//
+//                        } else {
+//                            if (d23 < d12) {
+//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[0]]));
+//                            } else {
+//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
+//                            }
+//                        }
+//                        continue;
+//                    } else {
+//                        if (x21 < x01 || x21 < x02) {
+//                            ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
+//
+//                        } else {
+//                            if (d31 < d12) {
+//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
+//                            } else {
+//                                ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
+//                            }
+//                        }
+//                        continue;
+//                    }
+//                }
+
             }
 
         }
@@ -175,22 +384,15 @@ void Armor::drawArmorBoundary(cv::Mat src) {
     cv::line(src, boundaryPoints[1], boundaryPoints[3], cv::Scalar(0, 0, 255), 2, 8, 0);
     cv::line(src, boundaryPoints[3], boundaryPoints[2], cv::Scalar(0, 0, 255), 2, 8, 0);
     cv::line(src, boundaryPoints[2], boundaryPoints[0], cv::Scalar(0, 0, 255), 2, 8, 0);
-    cv::putText(src, "0", boundaryPoints[0], cv::FONT_HERSHEY_DUPLEX, 2,
-                cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "1", boundaryPoints[1], cv::FONT_HERSHEY_DUPLEX, 2,
-                cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "2", boundaryPoints[2], cv::FONT_HERSHEY_DUPLEX, 2,
-                cv::Scalar(255, 0, 0), 1);
-    cv::putText(src, "3", boundaryPoints[3], cv::FONT_HERSHEY_DUPLEX, 2,
-                cv::Scalar(255, 0, 0), 1);
 }
 
 void Armor::showArmor(std::string s) {
     cv::imshow(s, imgwarp);
     cv::waitKey(0);
 }
-cv::Mat  Armor::getScore(){
-    cv::Mat grayimg,stddevMat;
+
+cv::Mat Armor::getScore() {
+    cv::Mat grayimg, stddevMat;
     cv::Scalar mean;
     cv::cvtColor(imgwarp, grayimg, cv::COLOR_BGR2GRAY);
     cv::meanStdDev(grayimg, mean, stddevMat);
