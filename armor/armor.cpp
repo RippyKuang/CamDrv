@@ -20,16 +20,23 @@ LightBar::LightBar(std::vector<cv::Point> c, cv::RotatedRect rRect) {
 }
 
 void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned char targetColor) {
+    int threhdGray,threhdRed,threWrite;
     if (targetColor == RED) {
 
-        int threhdGray = 170, threhdRed = 235, threWrite = 250;
-        cv::Mat kernel1 = getStructuringElement(cv::MORPH_RECT, cv::Size(7, 7));
-        cv::Mat grayimg, aftr_Graythd, aftr_Redthd, and_img, white_mask, imgDil;
+         threhdGray = 170, threhdRed = 235, threWrite = 250;
+    }else{
+          threhdGray =160, threhdRed = 240, threWrite = 240 ;
+    }
+        cv::Mat kernel1 = getStructuringElement(cv::MORPH_RECT, cv::Size(9,9 ));
+        cv::Mat grayimg, aftr_Graythd, aftr_Redthd, and_img, white_mask, imgDil,rchlimg;
         std::vector<std::vector<cv::Point>> contours;
         std::vector<cv::Vec4i> hierarchy;
         std::vector<cv::Mat> Trichlimgs;
         cv::split(src, Trichlimgs);
-        cv::Mat rchlimg = Trichlimgs[2];
+        if(targetColor==RED)
+            rchlimg = Trichlimgs[2];
+        else
+            rchlimg = Trichlimgs[0];
         cv::cvtColor(src, grayimg, cv::COLOR_BGR2GRAY);
         cv::threshold(grayimg, aftr_Graythd, threhdGray, 255, cv::THRESH_BINARY);
         cv::threshold(rchlimg, aftr_Redthd, threhdRed, 255, cv::THRESH_BINARY);
@@ -52,9 +59,7 @@ void LightBar::findLightBar(cv::Mat &src, std::vector<LightBar *> &LBs, unsigned
             }
         }
 
-    } else {
-        //TODO: Remove this comment
-    }
+
 }
 
 double LightBar::getLength() {
@@ -69,7 +74,7 @@ bool Armor::isParallel(LightBar *lb_1, LightBar *lb_2) {
         angle_1 = angle_2;
         angle_2 = temp;
     }
-    if (angle_2 - angle_1 < 5 || angle_1 + 180 - angle_2 < 5) {
+    if (angle_2 - angle_1 < 6 || angle_1 + 180 - angle_2 < 6) {
         return true;
     } else {
         return false;
@@ -91,25 +96,25 @@ Armor::Armor(cv::Mat &img, LightBar *lb_1, LightBar *lb_2) {
         (std::pow(vertex_1[0].x - vertex_1[1].x, 2) + std::pow(vertex_1[0].y - vertex_1[1].y, 2))) {
         cv::Point2f pt1 = (vertex_1[0] + vertex_1[1]) * 0.5;
         cv::Point2f pt2 = (vertex_1[2] + vertex_1[3]) * 0.5;
-        boundaryPoints[0] = pt1 + 0.65 * (pt1 - pt2);
-        boundaryPoints[1] = pt2 + 0.65 * (pt2 - pt1);
+        boundaryPoints[0] = pt1 + 0.5 * (pt1 - pt2);
+        boundaryPoints[1] = pt2 + 0.5 * (pt2 - pt1);
     } else {
         cv::Point2f pt1 = (vertex_1[0] + vertex_1[3]) * 0.5;
         cv::Point2f pt2 = (vertex_1[2] + vertex_1[1]) * 0.5;
-        boundaryPoints[1] = pt1 + 0.65 * (pt1 - pt2);
-        boundaryPoints[0] = pt2 + 0.65 * (pt2 - pt1);
+        boundaryPoints[1] = pt1 + 0.5 * (pt1 - pt2);
+        boundaryPoints[0] = pt2 + 0.5 * (pt2 - pt1);
     }
     if ((std::pow(vertex_2[0].x - vertex_2[3].x, 2) + std::pow(vertex_2[0].y - vertex_2[3].y, 2)) >
         (std::pow(vertex_2[0].x - vertex_2[1].x, 2) + std::pow(vertex_2[0].y - vertex_2[1].y, 2))) {
         cv::Point2f pt1 = (vertex_2[0] + vertex_2[1]) * 0.5;
         cv::Point2f pt2 = (vertex_2[2] + vertex_2[3]) * 0.5;
-        boundaryPoints[2] = pt1 + 0.65 * (pt1 - pt2);
-        boundaryPoints[3] = pt2 + 0.65 * (pt2 - pt1);
+        boundaryPoints[2] = pt1 + 0.5 * (pt1 - pt2);
+        boundaryPoints[3] = pt2 + 0.5 * (pt2 - pt1);
     } else {
         cv::Point2f pt1 = (vertex_2[0] + vertex_2[3]) * 0.5;
         cv::Point2f pt2 = (vertex_2[2] + vertex_2[1]) * 0.5;
-        boundaryPoints[3] = pt1 + 0.65 * (pt1 - pt2);
-        boundaryPoints[2] = pt2 + 0.65 * (pt2 - pt1);
+        boundaryPoints[3] = pt1 + 0.5 * (pt1 - pt2);
+        boundaryPoints[2] = pt2 + 0.5 * (pt2 - pt1);
 
     }
     if (boundaryPoints[0].x > boundaryPoints[2].x) {
@@ -206,12 +211,7 @@ void Armor::lightBarCluster(cv::Mat &src, std::vector<LightBar *> &LBs, std::vec
                 ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
         } else {
             float a, b, c;
-//            cv::putText(src, "0", LBs[x[0]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
-//                        cv::Scalar(255, 0, 0), 2);
-//            cv::putText(src, "1", LBs[x[1]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
-//                        cv::Scalar(255, 0, 0), 2);
-//            cv::putText(src, "2", LBs[x[2]]->getEllipse().center, cv::FONT_HERSHEY_DUPLEX, 2,
-//                        cv::Scalar(255, 0, 0), 2);
+
             a = std::abs(LBs[x[1]]->getEllipse().center.y - LBs[x[0]]->getEllipse().center.y);
             b = std::abs(LBs[x[1]]->getEllipse().center.y - LBs[x[2]]->getEllipse().center.y);
             c = std::abs(LBs[x[0]]->getEllipse().center.y - LBs[x[2]]->getEllipse().center.y);
@@ -226,7 +226,7 @@ void Armor::lightBarCluster(cv::Mat &src, std::vector<LightBar *> &LBs, std::vec
             double l2 = LBs[x[0]]->getLength();
 
 
-            if (std::abs(a - b) > 8 || std::abs(c - b) > 8 || std::abs(a - c) > 8) {
+            if (std::abs(a - b) > 5 || std::abs(c - b) > 5 || std::abs(a - c) > 5 ) {
                 if (a < b && a < c) {
                     if (x01 < x02 || x01 < x21) {
                         ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
@@ -320,61 +320,8 @@ void Armor::lightBarCluster(cv::Mat &src, std::vector<LightBar *> &LBs, std::vec
                     ARMORs.push_back(new Armor(src, LBs[x[a]], LBs[x[b]]));
                 else
                     ARMORs.push_back(new Armor(src, LBs[x[c]], LBs[x[d]]));
-//                if (d12 < d23) {
-//                    if (d31 < d12) {
-//                        if (x02 < x21 || x02 < x01) {
-//                            ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
-//                        } else {
-//                            if (d12 < d23) {
-//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
-//                            } else {
-//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
-//                            }
-//                        }
-//                        continue;
-//                    } else {
-//                        if (x01 < x21 || x01 < x02) {
-//                            ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[0]]));
-//
-//                        } else {
-//                            if (d23 < d31) {
-//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[2]]));
-//                            } else {
-//                                ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[1]]));
-//                            }
-//                        }
-//                        continue;
-//                    }
-//                } else {
-//                    if (d31 < d23) {
-//                        if (d23 < d12) {
-//                            ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
-//
-//                        } else {
-//                            if (d23 < d12) {
-//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[0]]));
-//                            } else {
-//                                ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
-//                            }
-//                        }
-//                        continue;
-//                    } else {
-//                        if (x21 < x01 || x21 < x02) {
-//                            ARMORs.push_back(new Armor(src, LBs[x[1]], LBs[x[2]]));
-//
-//                        } else {
-//                            if (d31 < d12) {
-//                                ARMORs.push_back(new Armor(src, LBs[x[0]], LBs[x[1]]));
-//                            } else {
-//                                ARMORs.push_back(new Armor(src, LBs[x[2]], LBs[x[0]]));
-//                            }
-//                        }
-//                        continue;
-//                    }
-//                }
 
             }
-
         }
     }
 }
@@ -391,12 +338,17 @@ void Armor::showArmor(std::string s) {
     cv::waitKey(0);
 }
 
-cv::Mat Armor::getScore() {
-    cv::Mat grayimg, stddevMat;
-    cv::Scalar mean;
-    cv::cvtColor(imgwarp, grayimg, cv::COLOR_BGR2GRAY);
-    cv::meanStdDev(grayimg, mean, stddevMat);
-    return stddevMat;
+double Armor::getScore() { //boundaryPoints
+    double x1=std::abs(boundaryPoints[1].x-boundaryPoints[3].x);
+    double x2=std::abs(boundaryPoints[0].x-boundaryPoints[2].x);
+    double x3=std::abs(boundaryPoints[1].y-boundaryPoints[0].y);
+    double x4=std::abs(boundaryPoints[3].y-boundaryPoints[2].y);
+
+    double k1=(boundaryPoints[1].y-boundaryPoints[3].y)/(boundaryPoints[1].x-boundaryPoints[3].x);
+    double k2=(boundaryPoints[0].y-boundaryPoints[2].y)/(boundaryPoints[0].x-boundaryPoints[2].x);
+    double d1=std::abs((boundaryPoints[1].y-boundaryPoints[0].y)-(boundaryPoints[3].y-boundaryPoints[2].y));
+
+    return x1+x2+x3+x4-10*std::abs(k1-k2)-25*d1;
 }
 
 std::vector<float> Armor::forward() {
@@ -410,6 +362,7 @@ std::vector<float> Armor::forward() {
 
     net.setInput(blob);  // 设置模型输入
     cv::Mat predict = net.forward(); // 推理出结果
+
     double total = 0;
     double MAX = predict.at<float>(0);
     for (int x = 0; x < predict.cols; x++)
@@ -418,5 +371,54 @@ std::vector<float> Armor::forward() {
         total += std::exp(predict.at<float>(x) - MAX);
     for (int x = 0; x < predict.cols; x++)
         res.push_back(std::exp((predict.at<float>(x) - MAX) / total));
+
     return res;
+}
+
+cv::Point2f *Armor::getBoundary() {
+    return boundaryPoints;
+}
+
+
+Armor *Tracker::getTarget() {
+    return target;
+}
+
+Armor *Tracker::push(std::vector<Armor *> & AMs) {
+    if(target== nullptr ||patience==0){
+        double bestScore=-999999;
+        for(auto am:AMs){
+            double s=am->getScore();
+            if(s>bestScore) {
+                target = am;
+                bestScore=s;
+            }
+        }
+        patience=2;
+        return target;
+    }else{
+        cv::Point2f*  b=target->getBoundary();
+        cv::Point2f center=(b[0]+b[1]+b[2]+b[3])/4;
+        Armor* temp_target;
+        double minDist=999999;
+        for(auto am:AMs){
+            cv::Point2f*  t_b=am->getBoundary();
+            cv::Point2f t_center=(t_b[0]+t_b[1]+t_b[2]+t_b[3])/4;
+            double dist=std::sqrt(std::pow(center.x-t_center.x,2)+std::pow(center.y-t_center.y,2));
+            if(dist<minDist){
+                minDist=dist;
+                temp_target=am;
+            }
+        }
+        std::cout<<minDist<<std::endl;
+        if(minDist<100){
+            patience=2;
+            target=temp_target;
+            return target;
+        }else{
+            patience--;
+            std::cout<<"lose target"+std::to_string(patience)<<std::endl;
+            return target;
+        }
+    }
 }

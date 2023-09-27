@@ -43,10 +43,21 @@ private:
 public:
     Armor(cv::Mat& img,LightBar *, LightBar *);
     std::vector<float> forward();
-    cv::Mat getScore();
+    double getScore();
     void drawArmorBoundary(cv::Mat);
+    cv::Point2f* getBoundary();
     void showArmor(std::string);
     void static lightBarCluster(cv::Mat &,std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);
 };
 
+
+class Tracker{
+private:
+    Armor* target= nullptr;
+    int patience=2;
+public:
+    Armor* push( std::vector<Armor *>&);
+    Armor* getTarget();
+
+};
 #endif //CAMDRV_ARMOR_HPP
