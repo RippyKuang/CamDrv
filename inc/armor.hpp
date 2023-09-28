@@ -25,6 +25,7 @@ public:
     std::vector<cv::Point> &getContour() {
         return contour;
     };
+
     double getLength();
 
     void static findLightBar(cv::Mat &, std::vector<LightBar *> &, unsigned char);
@@ -35,29 +36,40 @@ private:
     LightBar *LB_1;
     LightBar *LB_2;
     cv::Point2f boundaryPoints[4];
+    cv::Point2f lightBarBoundary[4];
     cv::Mat imgwarp;
     bool isHero = false;
 
     bool static isParallel(LightBar *, LightBar *);
 
 public:
-    Armor(cv::Mat& img,LightBar *, LightBar *);
+    Armor(cv::Mat &img, LightBar *, LightBar *);
+
     std::vector<float> forward();
+
     double getScore();
+
     void drawArmorBoundary(cv::Mat);
-    cv::Point2f* getBoundary();
+
+    void drawLBarBoundary(cv::Mat);
+
+    cv::Point2f *getBoundary();
+
     void showArmor(std::string);
-    void static lightBarCluster(cv::Mat &,std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);
+
+    void static lightBarCluster(cv::Mat &, std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);
 };
 
 
-class Tracker{
+class Tracker {
 private:
-    Armor* target= nullptr;
-    int patience=2;
+    Armor *target = nullptr;
+    int patience = 2;
 public:
-    Armor* push( std::vector<Armor *>&);
-    Armor* getTarget();
+    Armor *push(std::vector<Armor *> &);
+
+    Armor *getTarget();
 
 };
+
 #endif //CAMDRV_ARMOR_HPP
