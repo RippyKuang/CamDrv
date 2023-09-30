@@ -26,7 +26,7 @@ public:
         return contour;
     };
 
-    double getLength();
+    double getLength() const;
 
     void static findLightBar(cv::Mat &, std::vector<LightBar *> &, unsigned char);
 };
@@ -38,24 +38,31 @@ private:
     cv::Point2f boundaryPoints[4];
     cv::Point2f lightBarBoundary[4];
     cv::Mat imgwarp;
-    bool isHero = false;
 
     bool static isParallel(LightBar *, LightBar *);
 
 public:
     Armor(cv::Mat &img, LightBar *, LightBar *);
 
-    std::vector<float> forward();
+    ~Armor() {
+        delete LB_1;
+        delete LB_2;
+
+    }
+
+    std::vector<double> forward();
 
     double getScore();
 
-    void drawArmorBoundary(cv::Mat);
+    void drawArmorBoundary(cv::Mat &);
 
-    void drawLBarBoundary(cv::Mat);
+    void drawLBarBoundary(cv::Mat &);
 
     cv::Point2f *getBoundary();
 
-    void showArmor(std::string);
+    cv::Point2f *getLightBarBoundary();
+
+    void showArmor(const std::string &);
 
     void static lightBarCluster(cv::Mat &, std::vector<LightBar *> &, std::vector<Armor *> &ARMORs);
 };
@@ -63,12 +70,17 @@ public:
 
 class Tracker {
 private:
+    unsigned char target_color;
     Armor *target = nullptr;
-    int patience = 2;
+    int patience = 5;
 public:
-    Armor *push(std::vector<Armor *> &);
+    explicit Tracker(unsigned char t) : target_color(t) {};
+
+    bool push(cv::Mat &);
 
     Armor *getTarget();
+
+    void get(std::vector<cv::Point2d> &, int &, bool &);
 
 };
 
